@@ -1,25 +1,38 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
-	"net"
-	"net/url"
-	"strconv"
-	"github.com/jackpal/bencode-go"
+    "crypto/sha1"
+    "github.com/jackpal/bencode-go"
+    "bytes"
+    "log"
+    "encoding/gob"
 )
 
-type bencodeInfo struct {
-    Pieces      string `bencode:"pieces"`
-    PieceLength int    `bencode:"piece length"`
-    Length      int    `bencode:"length"`
-    Name        string `bencode:"name"`
+type BencodeInfo struct{
+    piece_length int
+    length int
+    name string
+    pieces string
 }
 
-type bencodeTorrent struct {
-    Announce string      `bencode:"announce"`
-    Info     bencodeInfo `bencode:"info"`
+type BencodeTorrent struct{
+    announce string
+    info BencodeInfo
+}
+
+func main() {
+    //write io to check if the code works and then continue to url tracker
+}
+
+func OpenBittorentFile(r io.Reader) (*BencodeTorrent, error){
+    torrentinfo := BencodeTorrent{}
+    err := bencode.Unmarshal(r, &torrentinfo)
+    if (err != nil){
+        return nil , err
+    }
+    return &torrentinfo, nil
 }
 
 type TorrentFile struct {
@@ -31,53 +44,38 @@ type TorrentFile struct {
     Name        string
 }
 
-// Peer encodes connection information for a peer
-type Peer struct {
-    IP   net.IP
-    Port uint16
+func (bto BencodeTorrent) toTorrentFile() (TorrentFile) {
+    torrentfile := TorrentFile{}
+    torrentfile.Announce = bto.announce
+    torrentfile.Length = bto.info.length
+    torrentfile.PieceLength = bto.info.piece_length
+    torrentfile.Name = bto.info.name
+
+    h := sha1.New()
+    h.Write([]byte(EncodeToBytes(bto.info)))//convert BencodeInfo struct to []byte
+
+    s := h.Sum(nil)
+    var ret [20]byte
+    copy(ret[:], s)
+
+    torrentfile.InfoHash = ret
+    
+
+    for i := 0; i < torrentfile.PieceLength; i++{
+        for j := 0; j < 20; j++{
+            torrentfile.PieceHashes[i][j] = bto.info.pieces[i*20 + j]
+        }
+    }
+
+    return torrentfile
 }
 
-func Open(r io.Reader) (*bencodeTorrent, error) {
-    bto := bencodeTorrent{}
-    err := bencode.Unmarshal(r, &bto)
-    if err != nil {
-        return nil, err
-    }
-    return &bto, nil
-}
-
-
-func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error) {
-    base, err := url.Parse(t.Announce)
-    if err != nil {
-        return "", err
-    }
-    params := url.Values{
-        "info_hash":  []string{string(t.InfoHash[:])},
-        "peer_id":    []string{string(peerID[:])},
-        "port":       []string{strconv.Itoa(int(Port))},
-        "uploaded":   []string{"0"},
-        "downloaded": []string{"0"},
-        "compact":    []string{"1"},
-        "left":       []string{strconv.Itoa(t.Length)},
-    }
-    base.RawQuery = params.Encode()
-    return base.String(), nil
-}
-
-// Unmarshal parses peer IP addresses and ports from a buffer
-func Unmarshal(peersBin []byte) ([]Peer, error) {
-    const peerSize = 6 // 4 for IP, 2 for port
-    numPeers := len(peersBin) / peerSize
-    if len(peersBin)%peerSize != 0 {
-        err := fmt.Errorf("Received malformed peers")
-        return nil, err
-    }
-    peers := make([]Peer, numPeers)
-    for i := 0; i < numPeers; i++ {
-        offset := i * peerSize
-        peers[i].IP = net.IP(peersBin[offset : offset+4])
-        peers[i].Port = binary.BigEndian.Uint16(peersBin[offset+4 : offset+6])
-    }
-    return peers, nil
+func EncodeToBytes(p interface{}) []byte {
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return buf.Bytes()
 }
