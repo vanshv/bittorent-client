@@ -1,4 +1,4 @@
-package torrentfilemod
+package main
 
 import (
 	"fmt"
@@ -22,6 +22,15 @@ type bencodeTorrent struct {
     Info     bencodeInfo `bencode:"info"`
 }
 
+type TorrentFile struct {
+    Announce    string
+    InfoHash    [20]byte
+    PieceHashes [][20]byte
+    PieceLength int
+    Length      int
+    Name        string
+}
+
 func OpenBittorentFile(r io.Reader) (*bencodeTorrent, error){
     torrentinfo := bencodeTorrent{}
     err := bencode.Unmarshal(r, &torrentinfo)
@@ -30,15 +39,6 @@ func OpenBittorentFile(r io.Reader) (*bencodeTorrent, error){
         return nil , err
     }
     return &torrentinfo, nil
-}
-
-type TorrentFile struct {
-    Announce    string
-    InfoHash    [20]byte
-    PieceHashes [][20]byte
-    PieceLength int
-    Length      int
-    Name        string
 }
 
 func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
@@ -56,7 +56,7 @@ func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
     copy(ret[:], s)
 
     torrentfile.InfoHash = ret
-
+/*
     usethis := torrentfile.Length/torrentfile.PieceLength
     piecehashes := make([][]byte, usethis*20)
  
@@ -77,6 +77,7 @@ func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
         }
         fmt.Println()
     }
+    */
     return torrentfile
 }
 
