@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"io"
-    //"crypto/sha1"
+    "crypto/sha1"
     "github.com/jackpal/bencode-go"
-    "bytes"
     "log"
     "encoding/gob"
+    "bytes"
 )
 
 type bencodeInfo struct {
@@ -34,7 +34,6 @@ type TorrentFile struct {
 func OpenBittorentFile(r io.Reader) (*bencodeTorrent, error){
     torrentinfo := bencodeTorrent{}
     err := bencode.Unmarshal(r, &torrentinfo)
-    fmt.Println(torrentinfo.Info.PieceLength)
     if (err != nil){
         return nil , err
     }
@@ -48,7 +47,12 @@ func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
     torrentfile.PieceLength = bto.Info.PieceLength
     torrentfile.Name = bto.Info.Name
 
-    // the dict is encoded in bencode form ( not bto.Info struct)
+    var buf bytes.Buffer
+	err := bencode.Marshal(&buf, bto.Info)
+    if(err != nil){
+        panic(err)
+    }
+	torrentfile.InfoHash = sha1.Sum(buf.Bytes())
 
     num_pieces := torrentfile.Length/torrentfile.PieceLength
     torrentfile.PieceHashes = make([][20]byte, num_pieces*20)
@@ -56,12 +60,6 @@ func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
     for i := 0; i < num_pieces; i++{
         for j := 0; j < 20; j++{
             torrentfile.PieceHashes[i][j] = bto.Info.Pieces[i*20 + j]
-            if(i < 5){
-                fmt.Printf("%x ", torrentfile.PieceHashes[i][j])
-            }
-        }
-        if(i<5){
-            fmt.Println()
         }
     }
     
@@ -84,11 +82,16 @@ func TorrentFileTester(torrentfile TorrentFile)(){
     torrentfile.PieceLength, "piecelength \n",
     torrentfile.Length, "length \n",
     torrentfile.Name, "name")
-    for i := 0; i<20; i++{
-        fmt.Printf("%x ", torrentfile.InfoHash[i])
+    fmt.Printf("%x infohash\n", torrentfile.InfoHash)
+    for i := 0; i < torrentfile.Length/torrentfile.PieceLength; i++{
+        for j := 0; j < 20; j++{
+            if(i<5){
+                fmt.Printf("%x ", torrentfile.PieceHashes[i][j])
+            }
+        }
+        if(i<5){
+            fmt.Println()
+        }
     }
-    // for i := 0; i < torrentinfo.PieceLength; i++{
-    //     fmt.Println(torrentinfo.PieceHashes[i], " ")
-    // }
-    fmt.Println("piecehashes")
+    fmt.Println("^ piecehashes")
 }

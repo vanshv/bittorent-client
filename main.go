@@ -1,7 +1,8 @@
 package main
 
 import (
-    "os"
+	//"fmt"
+	"os"
 )
 
 //debug and InfoHash in torrentfile struct
@@ -19,5 +20,13 @@ func main() {
 
     torrentinfo := bencodetorrent.toTorrentFile()
 
-    TorrentFileTester(torrentinfo)
+    var port = [20]byte{'w', 'e', 'l', 'c', 'o', 'm', 'e', 't', 'o', 'g', 'e', 't', 
+    'r', 'e', 'q', 'u', 'e', 's', 't', 's'}
+
+    getrequest, err := torrentinfo.buildTrackerURL(port, 6881)
+    if(err != nil){
+        panic(err)
+    }
+
+    makeGetReqeust(getrequest)
 }

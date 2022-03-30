@@ -3,6 +3,9 @@ package main
 import(
     "net/url"
     "strconv"
+    "fmt"
+    "bufio"
+    "net/http"
 )
 
 func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error){
@@ -23,5 +26,24 @@ func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, err
 
     base.RawQuery = torrentLinkInfo.Encode()
 
+    //fmt.Println(base.String())
     return base.String(), nil
+}
+
+func makeGetReqeust(getrequest string){
+    resp, err := http.Get(getrequest)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    fmt.Println("Response status:", resp.Status)
+
+    scanner := bufio.NewScanner(resp.Body)
+    for i := 0; scanner.Scan() && i < 5; i++ {
+        fmt.Println(scanner.Text())
+    }
+    if err := scanner.Err(); err != nil {
+        panic(err)
+    }
 }
