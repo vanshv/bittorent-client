@@ -4,7 +4,7 @@ import (
     "os"
 )
 
-//debug PieceHashes and InfoHash in torrentfile struct
+//debug and InfoHash in torrentfile struct
 //continue work on getting peers
 func main() {
     file, err := os.Open("debian.iso.torrent")

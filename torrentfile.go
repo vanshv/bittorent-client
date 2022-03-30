@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
-    "crypto/sha1"
+    //"crypto/sha1"
     "github.com/jackpal/bencode-go"
     "bytes"
     "log"
@@ -48,36 +48,23 @@ func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
     torrentfile.PieceLength = bto.Info.PieceLength
     torrentfile.Name = bto.Info.Name
 
-    h := sha1.New()
-    h.Write([]byte(EncodeToBytes(bto.Info)))//convert BencodeInfo struct to []byte
+    // the dict is encoded in bencode form ( not bto.Info struct)
 
-    s := h.Sum(nil)
-    var ret [20]byte
-    copy(ret[:], s)
-
-    torrentfile.InfoHash = ret
-/*
-    usethis := torrentfile.Length/torrentfile.PieceLength
-    piecehashes := make([][]byte, usethis*20)
- 
-    // for i := 0; i < torrentfile.PieceLength; i++{
-    //     for j := 0; j < 20; j++{
-    //         torrentfile.PieceHashes[i][j] = bto.Info.Pieces[i*20 + j]
-    //     }
-    // }
-    fmt.Println(len(bto.Info.Pieces))
-    for i := 0; i < usethis; i++{
+    num_pieces := torrentfile.Length/torrentfile.PieceLength
+    torrentfile.PieceHashes = make([][20]byte, num_pieces*20)
+    
+    for i := 0; i < num_pieces; i++{
         for j := 0; j < 20; j++{
-            piecehashes[i][j] = bto.Info.Pieces[i*20 + j]
+            torrentfile.PieceHashes[i][j] = bto.Info.Pieces[i*20 + j]
+            if(i < 5){
+                fmt.Printf("%x ", torrentfile.PieceHashes[i][j])
+            }
+        }
+        if(i<5){
+            fmt.Println()
         }
     }
-    for i := 0; i < usethis; i++{
-        for j := 0; j<20; j++{
-            fmt.Println(piecehashes[i][j], " ")
-        }
-        fmt.Println()
-    }
-    */
+    
     return torrentfile
 }
 
