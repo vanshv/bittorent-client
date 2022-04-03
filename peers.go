@@ -1,11 +1,13 @@
 package main
 
-import(
-    "net/url"
-    "strconv"
-    "fmt"
-    "bufio"
-    "net/http"
+import (
+	"bufio"
+	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"strconv"
+    "encoding/binary"
 )
 
 func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error){
@@ -40,10 +42,33 @@ func makeGetReqeust(getrequest string){
     fmt.Println("Response status:", resp.Status)
 
     scanner := bufio.NewScanner(resp.Body)
-    for i := 0; scanner.Scan() && i < 5; i++ {
+    for i := 0; scanner.Scan() && i < 10; i++ {
         fmt.Println(scanner.Text())
     }
     if err := scanner.Err(); err != nil {
         panic(err)
     }
+    //hard part is to deencode bencoded data
+}
+
+type Peer struct{
+    IP net.IP
+    Port uint16
+}
+
+//store peer data in structs once it is deencoded
+func Unmarshal(peerslist []byte)([]Peer, error){
+    const peerSize = 6 
+    numPeers := len(peerslist) / peerSize
+    if len(peerslist)%peerSize != 0 {
+        err := fmt.Errorf("Received malformed peers")
+        return nil, err
+    }
+    peers := make([]Peer, numPeers)
+    for i := 0; i < numPeers; i++ {
+        offset := i * peerSize
+        peers[i].IP = net.IP(peerslist[offset : offset + 4])
+        peers[i].Port = binary.BigEndian.Uint16(peerslist[offset + 4 : offset + 6])
+    }
+    return peers, nil
 }
