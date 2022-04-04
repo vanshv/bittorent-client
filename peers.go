@@ -1,13 +1,15 @@
 package main
 
 import (
-	"bufio"
+	//"bufio"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
     "encoding/binary"
+    "github.com/jackpal/bencode-go"
+    //"io"
 )
 
 func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error){
@@ -28,7 +30,6 @@ func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, err
 
     base.RawQuery = torrentLinkInfo.Encode()
 
-    //fmt.Println(base.String())
     return base.String(), nil
 }
 
@@ -41,14 +42,22 @@ func makeGetReqeust(getrequest string){
 
     fmt.Println("Response status:", resp.Status)
 
-    scanner := bufio.NewScanner(resp.Body)
-    for i := 0; scanner.Scan() && i < 10; i++ {
-        fmt.Println(scanner.Text())
-    }
-    if err := scanner.Err(); err != nil {
+    //scanner := bufio.NewScanner(resp.Body)
+    // for i := 0; scanner.Scan() && i < 10; i++ {
+    //     fmt.Println(scanner.Text())
+    // }
+    // if err := scanner.Err(); err != nil {
+    //     panic(err)
+    // }
+    //peers := UnmarshallResponse(resp.Body)
+    TR := TrackerResponse{}
+    err = bencode.Unmarshal(resp.Body, &TR)
+    fmt.Println(resp.Body)
+    if(err != nil){
         panic(err)
     }
-    //hard part is to deencode bencoded data
+    peerlist := UnmarshallPeer([]byte(TR.Peers))
+    fmt.Println(peerlist)
 }
 
 type Peer struct{
@@ -56,13 +65,19 @@ type Peer struct{
     Port uint16
 }
 
+type TrackerResponse struct{
+	Interval int `bencode:"interval"`
+	Peers string `bencode:"peers"`
+}
+
 //store peer data in structs once it is deencoded
-func Unmarshal(peerslist []byte)([]Peer, error){
+func UnmarshallPeer(peerslist []byte)([]Peer){
     const peerSize = 6 
     numPeers := len(peerslist) / peerSize
+    fmt.Print("numPeers: ", numPeers)
     if len(peerslist)%peerSize != 0 {
         err := fmt.Errorf("Received malformed peers")
-        return nil, err
+        panic(err)
     }
     peers := make([]Peer, numPeers)
     for i := 0; i < numPeers; i++ {
@@ -70,5 +85,5 @@ func Unmarshal(peerslist []byte)([]Peer, error){
         peers[i].IP = net.IP(peerslist[offset : offset + 4])
         peers[i].Port = binary.BigEndian.Uint16(peerslist[offset + 4 : offset + 6])
     }
-    return peers, nil
+    return peers
 }
