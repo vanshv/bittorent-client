@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	"os"
 )
 
@@ -9,6 +9,7 @@ import (
 //continue work on getting peers
 func main() {
     file, err := os.Open("debian.iso.torrent")
+    //file, err := os.Open("3-gatsu.torrent")
     if err != nil {
         panic(err)
     }
@@ -28,5 +29,7 @@ func main() {
         panic(err)
     }
 
-    makeGetReqeust(getrequest)
+    TR := makeGetReqeust(getrequest)
+    fmt.Println(TR.Interval)
+    fmt.Println(TR.Peers)
 }
