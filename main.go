@@ -5,8 +5,8 @@ import (
 	"os"
 )
 
-//debug and InfoHash in torrentfile struct
-//continue work on getting peers
+//https://www.youtube.com/watch?v=LvgVSSpwND8
+//10 minutes into^, complete this and start with concurrency code
 func main() {
     file, err := os.Open("debian.iso.torrent")
     //file, err := os.Open("3-gatsu.torrent")
@@ -32,4 +32,8 @@ func main() {
     TR := makeGetReqeust(getrequest)
     fmt.Println(TR.Interval)
     fmt.Println(TR.Peers)
+
+    ConnectToPeers(TR)
+
+
 }

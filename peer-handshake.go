@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
-
+	"net"
+	"time"
+	"strconv"
 )
 
 type Handshake struct{
@@ -13,7 +15,7 @@ type Handshake struct{
 	PeerID [20]byte
 }
 
-func(hshake *Handshake) ExtendHand() []byte{
+func ExtendHand(hshake *Handshake) []byte{
 	buf := make([]byte, len(hshake.Protocol) + 49)
 	buf[0] = byte(len(hshake.Protocol))
 	curr := 1
@@ -23,6 +25,19 @@ func(hshake *Handshake) ExtendHand() []byte{
 	return buf
 }
 
-func(buf []byte) RecieveHand() (*Handshake){
+// func RecieveHand(buf []byte) (*Handshake){
 
+// }
+
+func ConnectToPeers(TR *TrackerResponse){
+	connect :=  TR.Peers[0].IP + ":" + strconv.Itoa(int(TR.Peers[0].Port))
+	conn, err := net.DialTimeout("tcp", connect, 5*time.Second)
+    if err != nil {
+    panic(err)
+    }
+	var str []byte
+
+	conn.Read(str)
+	fmt.Println(str)
+	fmt.Println(conn.LocalAddr())
 }
