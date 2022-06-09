@@ -51,7 +51,7 @@ func (m *Message) Serialize() []byte {
 	return buf
 }
 
-func Read(r io.Reader) (*Message, error) {
+func ReadMessage(r io.Reader) (*Message, error) {
 	lengthBuf := make([]byte, 4)
 	_, err := io.ReadFull(r, lengthBuf)
 	if err != nil{

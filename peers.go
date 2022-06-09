@@ -9,7 +9,7 @@ import (
     "github.com/jackpal/bencode-go"
 )
 
-func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error){
+func (t TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error){
     //builds the tracker URL, which will make GET request to torrentfile.announce
     base, err := url.Parse(t.Announce)
     if err != nil {
@@ -30,7 +30,7 @@ func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, err
     return base.String(), nil
 }
 
-func makeGetReqeust(getrequest string)(*TrackerResponse){
+func makeGetReqeust(getrequest string)(TrackerResponse){
     resp, err := http.Get(getrequest)
     if err != nil {
         panic(err)
@@ -41,11 +41,13 @@ func makeGetReqeust(getrequest string)(*TrackerResponse){
 
     TR := TrackerResponse{69420, nil}
     err = bencode.Unmarshal(resp.Body, &TR)
+    //i don't understand completely, but as far as I can tell we don't need to pass the TR to 
+    //unmarshal into the struct, we just need to define it and tag the variable names
     if(err != nil){
         panic(err)
     }
     
-    return &TR
+    return TR
 }
 
 type Peer struct{

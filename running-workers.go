@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 )
+//how to remove errors with t. or how to remove t from everywhere?
 
 type piecetoDl struct{
 	index	int
@@ -15,7 +16,7 @@ type pieceDled struct{
 	buf		[]byte
 }//maybe size of this needs to be fixed?
 
-func (t *TorrentFile) run(){
+func(t *TorrentFile) run(){
 	workQueue := make(chan * piecetoDl, len(t.PieceHashes))
 	results := make(chan *pieceDled)
 	for index, hash := range t.PieceHashes {
@@ -24,17 +25,27 @@ func (t *TorrentFile) run(){
 		//piece size is piece size or + remainder
 		workQueue <- &piecetoDl{index, hash, length}
 	}
+	//we push these structs in workQueue so that it can take them and dl them
+	//thus workQueue stores undownloaded pieces.
+	//once dled, it will send the piece to results buffer
+	//results buffer capacity is 0, so it will probably send it for hash check.
 
-	for _, peer := range t.Length{//list of peers, this is a placeholder
+	//we probably need the list of unchoked peers, which we do not have
+	//however we haev the list of all peers in TrackerResponse struct
+	for _, peer := range t.xyz{//list of peers, this is a placeholder
 		go t.startDlWorker(peer, workQueue, results)
 	}
+	//this method of assigning pieces to peers
+	//optimization ideas(depend on how we define peers)
+	//-download from unchoked peers
+	//-download from a peer which we're not already downloading from(at least come back to this peer after going to  all ohter peers)
 
-	
+	//basically, the whole file is stored in this random buffer
 	buf := make([]byte, t.Length)
 	dledPieces := 0
 	for dledPieces < len(t.PieceHashes){
 		res := <-results//read from results(?)
-		begin, end := t.calculateBounds(res.index)
+		begin, end := t.calculateBounds(res.index)//this can use calculatePieceSize ig
 		copy(buf[begin : end], res.buf)
 		dledPieces++
 	}
@@ -42,8 +53,11 @@ func (t *TorrentFile) run(){
 	close(workQueue)
 }
 
-func (t *TorrentFile) startDlWorker(/*wtf is this*/peer Peer, workQueue chan *piecetoDl, results chan *pieceDled){
-	c, err := client.New(peer, t, t.InfoHash)
+//makes connection with peer, pushes dled piece to results buffer
+func (t *TorrentFile) startDlWorker(peer Peer, workQueue chan *piecetoDl, results chan *pieceDled){
+	c, err := NewClient(peer, t.peerID, t.InfoHash)//t.peerID is our PeerID
+	//ok so we need to create a class with torrentfile as its parent, 
+	//we can add fields to it that come up further or in the code
 	if err != nil{
 		panic(err)
 		return
@@ -105,3 +119,13 @@ func (state *pieceProgress) readMessage() error {
 		state.backlog--
 	}
 }
+
+func (t *TorrentFile) calculatePieceSize(index int) (int) {
+	//if statement clearly wrong lmao dumbass wtf
+	if len(t.InfoHash) == index {
+		remainder := t.Length - len(t.PieceHashes - 1)*t.PieceLength
+		return remainder
+	}
+	return t.PieceLength
+	
+}//needs to be tested

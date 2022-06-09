@@ -5,8 +5,6 @@ import (
 	"os"
 )
 
-//https://www.youtube.com/watch?v=LvgVSSpwND8
-//10 minutes into^, complete this and start with concurrency code
 func main() {
     file, err := os.Open("debian.iso.torrent")
     //file, err := os.Open("3-gatsu.torrent")
