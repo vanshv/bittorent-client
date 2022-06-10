@@ -2,19 +2,22 @@ package main
 
 import (
 	"log"
+	"time"
 )
 //how to remove errors with t. or how to remove t from everywhere?
 
 type piecetoDl struct{
 	index	int
 	hash	[20]byte
-	length	int
+	length	int// what does this length value mean?
 }
 
 type pieceDled struct{
 	index	int
 	buf		[]byte
 }//maybe size of this needs to be fixed?
+//no, its not size
+//maybe length of number of blocks?
 
 func(t *TorrentFile) run(){
 	workQueue := make(chan * piecetoDl, len(t.PieceHashes))
@@ -74,7 +77,6 @@ func (t *TorrentFile) startDlWorker(peer Peer, workQueue chan *piecetoDl, result
 			continue
 		}
 	
-	
 		buf, err := attemptPieceDownload(c, p2dl)
 		if err != nil{
 			log.Println("Exiting", err)
@@ -89,35 +91,53 @@ func (t *TorrentFile) startDlWorker(peer Peer, workQueue chan *piecetoDl, result
 			continue
 		}
 
-		c.SendHave(p2dl.index)
+		c.SendHave(p2dl.index)//what does this message mean?
 		results <- &pieceDled{p2dl.index, buf}
 	}
 }
 
-type pieceProgress struct {
-	index	int
-	client	*client.Client
-	buf 	[]byte
-	downloaded int
-	requested int
-	backlog	int
-}
-
-func (state *pieceProgress) readMessage() error {
-	msg, err := state.client.Read()
-	switch msg.ID{
-	case message.MsgUnchoke:
-		state.client.Choked = false
-	case message.MsgChoke:
-		state.client.Choked = true
-    case message.MsgHave:
-        index, err := message.ParseHave(msg)
-        state.client.Bitfield.SetPiece(index)
-	case message.MsgPiece:
-		n, err := message.ParsePiece(state.index, state.buf, msg)
-		state.downloaded += n
-		state.backlog--
+const MaxBlockSize = 16384
+//pieces are made of blocks, in reality we request blocks
+//from the peer
+const MaxBacklog = 5
+//number of unfulfilled requests a client can have
+//no idea whats happening here
+func attemptDownloadPiece(c *Client, p2dl *piecetoDl) ([]byte, error){
+	state := pieceProgress{
+		index: p2dl.index,
+		client: c,
+		buf: make([]byte, p2dl.length),
 	}
+
+	c.Conn.SetDeadline(time.Now().Add(30 * time.Second))
+	defer c.Conn.SetDeadline((time.Time{}))
+
+	for state.downloaded < p2dl.length{
+		//if unchoked, send requests until we have enough
+		//unfulfilled requests
+		if !state.client.Choked {
+			for state.backlog < MaxBacklog && state.requested < pw.length
+				//Last bloack might be shorter than the typical block
+				if pw.length - state.requested < blockSize{
+					blockSize = pw.length - state.requested
+				}
+
+				err := c.SendRequest(p2dl.index, state.requested, blockSize)
+				if err != nil {
+					return nil, err
+				}
+				state.backlog++
+				state.requested += blockSize
+			}
+
+			err := state.readMessage{
+				if err != nil {
+					return nil, err
+				}
+			}
+	}
+
+	return state.buf, nil
 }
 
 func (t *TorrentFile) calculatePieceSize(index int) (int) {
