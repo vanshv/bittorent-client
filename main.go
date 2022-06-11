@@ -19,19 +19,40 @@ func main() {
 
     torrentinfo := bencodetorrent.toTorrentFile()
 
-    var port = [20]byte{'w', 'e', 'l', 'c', 'o', 'm', 'e', 't', 'o', 'g', 'e', 't', 
+    var peerID = [20]byte{'w', 'e', 'l', 'c', 'o', 'm', 'e', 't', 'o', 'g', 'e', 't', 
     'r', 'e', 'q', 'u', 'e', 's', 't', 's'}
+    myPort := 6881
 
-    getrequest, err := torrentinfo.buildTrackerURL(port, 6881)
+    getrequest, err := torrentinfo.buildTrackerURL(peerID, uint16(myPort))
     if(err != nil){
         panic(err)
     }
 
-    TR := makeGetReqeust(getrequest)
-    fmt.Println(TR.Interval)
-    fmt.Println(TR.Peers)
+    tr := makeGetReqeust(getrequest)
+    torrentdata := TorrentData{
+        InfoHash: torrentinfo.InfoHash,
+        PieceHashes: torrentinfo.PieceHashes,
+        PieceLength: torrentinfo.PieceLength,
+        Length: torrentinfo.Length,
+        TrackerResp: tr,
+        MyPort: uint16(myPort),
+        MyPeerID: peerID,
+    }
 
-    ConnectToPeers(TR)
+    fmt.Println(tr.Interval)
+    fmt.Println(tr.Peers)
 
+    ConnectToPeers(tr)
+    torrentdata.Download()
 
+}
+
+type TorrentData struct {
+    InfoHash    [20]byte
+    PieceHashes [][20]byte
+    PieceLength int
+    Length      int
+    TrackerResp TrackerResponse
+    MyPort      uint16
+    MyPeerID    [20]byte
 }

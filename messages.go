@@ -79,3 +79,9 @@ func ReadMessage(r io.Reader) (*Message, error) {
 
 	return &m, nil
 }
+
+func FormatHave(index int) *Message{
+	payload := make([]byte, 4)
+	binary.BigEndian.PutUint32(payload, uint32(index))
+	return &Message{ID: MsgHave, Payload: payload}
+}

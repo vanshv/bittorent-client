@@ -16,15 +16,15 @@ type pieceProgress struct {
 func (state *pieceProgress) readMessage() error {
 	msg, err := state.client.Read() //this call blocks
 	switch msg.ID{
-	case message.MsgUnchoke:
+	case MsgUnchoke:
 		state.client.Choked = false
-	case message.MsgChoke:
+	case MsgChoke:
 		state.client.Choked = true
-    case message.MsgHave:
-        index, err := message.ParseHave(msg)
+    case MsgHave:
+        index, err := ParseHave(msg)
         state.client.Bitfield.SetPiece(index)
-	case message.MsgPiece:
-		n, err := message.ParsePiece(state.index, state.buf, msg)
+	case MsgPiece:
+		n, err := ParsePiece(state.index, state.buf, msg)
 		state.downloaded += n
 		state.backlog--
 	}

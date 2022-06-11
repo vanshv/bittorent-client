@@ -13,10 +13,10 @@ type Client struct {
 	Bitfield Bitfield
 	peer     Peer
 	infoHash [20]byte
-	peerID   int//changed this from [20]byte to int, check if any problems
+	peerID   [20]byte
 }
 
-func NewClient(peer Peer, PeerID int, InfoHash [20]byte) (*Client, error){
+func NewClient(peer Peer, PeerID, InfoHash [20]byte) (*Client, error){
 	connect :=  peer.IP + ":" + strconv.Itoa(int(peer.Port))
 	conn, err := net.DialTimeout("tcp", connect, 5*time.Second)
 
@@ -32,4 +32,22 @@ func NewClient(peer Peer, PeerID int, InfoHash [20]byte) (*Client, error){
 		infoHash: InfoHash,
 		peerID: PeerID,
 	}, nil
+}
+
+func (c *Client) SendUnchoke() error {
+	msg := Message{ID :	MsgUnchoke}
+	_, err := c.Conn.Write(msg.Serialize())
+	return err
+}
+
+func (c *Client) SendInterested() error {
+	msg := Message{ID :	MsgInterested}
+	_, err := c.Conn.Write(msg.Serialize())
+	return err
+}
+
+func (c *Client) SendHave(index int) error {
+	msg := FormatHave(index)
+	_, err := c.Conn.Write(msg.Serialize())
+	return err
 }
