@@ -50,7 +50,6 @@ func (t *TorrentData) startDlWorker(peer Peer, workQueue chan *piecetoDl, result
 	c, err := NewClient(peer, t.MyPeerID, t.InfoHash)
 	if err != nil{
 		panic(err)
-		return
 	}
 	defer c.Conn.Close()
 	log.Printf("Completed handshake with %s\n", peer.IP)
@@ -98,13 +97,12 @@ func attemptPieceDownload(c *Client, p2dl *piecetoDl) ([]byte, error){
 	defer c.Conn.SetDeadline((time.Time{}))
 
 	for state.downloaded < p2dl.length{
-		//if unchoked, send requests until we have enough
-		//unfulfilled requests
 		if !state.client.Choked {
-			for state.backlog < MaxBacklog && state.requested < pw.length{
+			for state.backlog < MaxBacklog && state.requested < p2dl.length{
+				blockSize := MaxBlockSize
 				//Last bloack might be shorter than the typical block
-				if pw.length - state.requested < blockSize{
-					blockSize = pw.length - state.requested
+				if p2dl.length - state.requested < blockSize{
+					blockSize = p2dl.length - state.requested
 				}
 
 				err := c.SendRequest(p2dl.index, state.requested, blockSize)
@@ -116,9 +114,9 @@ func attemptPieceDownload(c *Client, p2dl *piecetoDl) ([]byte, error){
 			}
 
 			err := state.readMessage()
-				if err != nil {
-					return nil, err
-				}
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -127,7 +125,7 @@ func attemptPieceDownload(c *Client, p2dl *piecetoDl) ([]byte, error){
 
 func (t *TorrentData) calculatePieceSize(index int) (int) {
 	if len(t.PieceHashes) == index {
-		remainder := t.Length - len(t.PieceHashes - 1)*t.PieceLength
+		remainder := t.Length - (len(t.PieceHashes) - 1)*t.PieceLength
 		return remainder
 	}
 	return t.PieceLength

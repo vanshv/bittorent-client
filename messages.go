@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 )
 
@@ -24,7 +25,7 @@ type Message struct {
     Payload []byte
 }
 
-type Bitfield []byte
+type Bitfield []byte //we don't keep an instance of our bitfield, but of the peers that are connected to us
 
 func (bf Bitfield) HasPiece(index int) bool {
 	byteIndex := index/8
@@ -84,4 +85,38 @@ func FormatHave(index int) *Message{
 	payload := make([]byte, 4)
 	binary.BigEndian.PutUint32(payload, uint32(index))
 	return &Message{ID: MsgHave, Payload: payload}
+}
+
+func ParseHave(msg Message) (int, error){
+	if(msg.ID != MsgHave){
+		return 0, fmt.Errorf("Expected a HAVE message and recieved %d", msg.ID)
+	}
+	if(len(msg.Payload) != 4){
+		return 0, fmt.Errorf("Expected a 4-byte integer and received %d", len(msg.Payload))
+	}
+	index := int(binary.BigEndian.Uint32(msg.Payload))
+	return index, nil
+}
+
+func ParsePiece(index int, buf []byte, msg *Message) (int, error) {
+	if msg.ID != MsgPiece {
+		return 0, fmt.Errorf("Expected PIECE (ID %d), got ID %d", MsgPiece, msg.ID)
+	}
+	if len(msg.Payload) < 8 {
+		return 0, fmt.Errorf("Payload too short. %d < 8", len(msg.Payload))
+	}
+	parsedIndex := int(binary.BigEndian.Uint32(msg.Payload[0:4]))
+	if parsedIndex != index {
+		return 0, fmt.Errorf("Expected index %d, got %d", index, parsedIndex)
+	}
+	begin := int(binary.BigEndian.Uint32(msg.Payload[4:8]))
+	if begin >= len(buf) {
+		return 0, fmt.Errorf("Begin offset too high. %d >= %d", begin, len(buf))
+	}
+	data := msg.Payload[8:]
+	if begin+len(data) > len(buf) {
+		return 0, fmt.Errorf("Data too long [%d] for offset %d with length %d", len(data), begin, len(buf))
+	}
+	copy(buf[begin:], data)
+	return len(data), nil
 }

@@ -9,7 +9,7 @@ import (
 )
 
 type Handshake struct{
-	Protocol [19]byte
+	Protocol string
 	InfoHash [20]byte
 	PeerID [20]byte
 }
@@ -18,7 +18,7 @@ func (hshake *Handshake) Serialize() []byte{
 	hbuffer := make([]byte, len(hshake.Protocol) + 49)
 	hbuffer[0] = byte(len(hshake.Protocol))
 	curr := 1
-    curr += copy(hbuffer[curr:], hshake.Protocol[:])
+    curr += copy(hbuffer[curr:], hshake.Protocol)
 	curr += copy(hbuffer[curr : ], make([]byte, 8))
 	curr += copy(hbuffer[curr : ], hshake.InfoHash[:])
 	curr += copy(hbuffer[curr : ], hshake.PeerID[:])
@@ -26,7 +26,7 @@ func (hshake *Handshake) Serialize() []byte{
 }
 
 //parses a handshake from a stream
-func ReadHandshake(r io.Reader) (*Handshake){
+func ReadHandshake(r io.Reader) (*Handshake, error){
 	hbuffer := make([]byte, 68)
 	n, err := r.Read(hbuffer)
 	if err != nil {
@@ -42,12 +42,11 @@ func ReadHandshake(r io.Reader) (*Handshake){
 	}
 	curr := 1
 	extension := [8]byte{0, 0, 0, 0, 0, 0, 0, 0}
-	curr += copy(h.Protocol[:], hbuffer[curr:])
+	curr += copy([]byte(h.Protocol), hbuffer[curr:])
 	curr += copy(extension[:], hbuffer[curr:])
 	curr += copy(h.InfoHash[:], hbuffer[curr:])
 	curr += copy(h.PeerID[:], hbuffer[curr:])
-
-	return &h
+	return &h, nil
 }
 
 func ConnectToPeers(TR TrackerResponse){
@@ -62,4 +61,12 @@ func ConnectToPeers(TR TrackerResponse){
 	conn.Read(str)
 	fmt.Println(str)
 	fmt.Println(conn.LocalAddr())
+}
+
+func NewHandshake(infoHashnew [20]byte, peerID [20]byte) (*Handshake){
+	return &Handshake{
+		Protocol: "Bittorent protocol",
+		InfoHash: infoHashnew,
+		PeerID: peerID,
+	}
 }
