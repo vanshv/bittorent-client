@@ -54,7 +54,7 @@ func ConnectToPeers(TR TrackerResponse){
 	connect :=  TR.Peers[0].IP + ":" + strconv.Itoa(int(TR.Peers[0].Port))
 	conn, err := net.DialTimeout("tcp", connect, 5*time.Second)
     if err != nil {
-    panic(err)
+    	panic(err)
     }
 	var str []byte
 

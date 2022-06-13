@@ -1,11 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"time"
-	"bytes"
 )
 
 // A Client is a TCP connection with a peer
@@ -19,8 +20,13 @@ type Client struct {
 }
 
 func NewClient(peer Peer, PeerID [20]byte, InfoHash [20]byte) (*Client, error){
-	connect :=  peer.IP + ":" + strconv.Itoa(int(peer.Port))
-	conn, err := net.DialTimeout("tcp", connect, 5*time.Second)
+	peerstr :=  net.JoinHostPort(peer.IP, strconv.Itoa(int(peer.Port)))
+	conn, err := net.DialTimeout("tcp", peerstr, 5*time.Second)
+	if err != nil{
+		log.Println(err)
+		return nil, nil
+		//need to kill the thread somehow
+	}
 
 	_, err = completeHandshake(conn, PeerID, InfoHash)
 	if err != nil {
@@ -100,14 +106,14 @@ func completeHandshake(conn net.Conn, PeerID [20]byte, InfoHash [20]byte) (*Hand
 	if err != nil{
 		return nil, err
 	}
-	if (!bytes.Equal(req.InfoHash[:], InfoHash[:])	){
+	if (!bytes.Equal(req.InfoHash[:], InfoHash[:])){
 		return nil, fmt.Errorf("Expected infohash %s but recieved %s", req.InfoHash[:], InfoHash[:])
 	}
 
 	return req, nil
 }
 
-func (c *Client) Read() (Message, error) {
+func (c *Client) Read() (*Message, error) {
 	msg, err := ReadMessage(c.Conn)
-	return *msg, err
+	return msg, err
 }

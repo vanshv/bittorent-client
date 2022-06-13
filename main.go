@@ -1,50 +1,42 @@
 package main
 
 import (
-	"fmt"
 	"os"
+    "log"
 )
 
 func main() {
-    file, err := os.Open("debian.iso.torrent")
-    //file, err := os.Open("3-gatsu.torrent")
+    inPath, err := os.Open("debian.torrent")
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
 
-    bencodetorrent, err := OpenBittorentFile(file)
-    if err != nil {
-        panic(err)
+    torrentinfo, err := OpenTorrentFile(inPath)
+    if err != nil{
+        log.Fatal(err)
     }
 
-    torrentinfo := bencodetorrent.toTorrentFile()
-
-    var peerID = [20]byte{'w', 'e', 'l', 'c', 'o', 'm', 'e', 't', 'o', 'g', 'e', 't', 
-    'r', 'e', 'q', 'u', 'e', 's', 't', 's'}
-    myPort := 6881
-
-    getrequest, err := torrentinfo.buildTrackerURL(peerID, uint16(myPort))
-    if(err != nil){
-        panic(err)
+    torrentdata, err := connectToTracker(*torrentinfo)
+    if err != nil{
+        log.Fatal(err)
     }
 
-    tr := makeGetReqeust(getrequest)
-    torrentdata := TorrentData{
-        InfoHash: torrentinfo.InfoHash,
-        PieceHashes: torrentinfo.PieceHashes,
-        PieceLength: torrentinfo.PieceLength,
-        Length: torrentinfo.Length,
-        TrackerResp: tr,
-        MyPort: uint16(myPort),
-        MyPeerID: peerID,
+    buf, err := torrentdata.Download()
+    if err != nil{
+        log.Fatal(err)
     }
 
-    fmt.Println(tr.Interval)
-    fmt.Println(tr.Peers)
+    outPath := "debian.iso"
+    outFile, err := os.Create(outPath)
+    if err != nil{
+        log.Fatal(err)
+    }
+    defer outFile.Close()
 
-    ConnectToPeers(tr)
-    torrentdata.Download()
-
+    _, err = outFile.Write(buf)
+    if err != nil{
+        log.Fatal(err)
+    }
 }
 
 type TorrentData struct {
@@ -55,4 +47,47 @@ type TorrentData struct {
     TrackerResp TrackerResponse
     MyPort      uint16
     MyPeerID    [20]byte
+}
+
+func OpenTorrentFile(inPath *os.File) (*TorrentFile, error){
+    bencodetorrent, err := OpenBittorentFile(inPath)
+    if err != nil {
+        return nil, err
+    }
+    torrentinfo, err := bencodetorrent.toTorrentFile()
+    if err != nil{
+        return nil, err
+    }
+
+    return &torrentinfo, nil
+}
+
+func connectToTracker(torrentfile TorrentFile) (*TorrentData, error){
+    var peerID = [20]byte{'w', 'e', 'l', 'c', 'o', 'm', 'e', 't', 'o', 'g', 'e', 't', 
+    'r', 'e', 'q', 'u', 'e', 's', 't', 's'}
+    myPort := 6881
+
+    getrequest, err := torrentfile.buildTrackerURL(peerID, uint16(myPort))
+    if(err != nil){
+        return nil, err
+    }
+
+    tr, err := makeGetReqeust(getrequest)
+    if err != nil{
+        return nil, err
+    }
+
+    torrentdata := TorrentData{
+        InfoHash: torrentfile.InfoHash,
+        PieceHashes: torrentfile.PieceHashes,
+        PieceLength: torrentfile.PieceLength,
+        Length: torrentfile.Length,
+        TrackerResp: *tr,
+        MyPort: uint16(myPort),
+        MyPeerID: peerID,
+    }
+
+    //ConnectToPeers(*tr)
+
+    return &torrentdata, nil
 }

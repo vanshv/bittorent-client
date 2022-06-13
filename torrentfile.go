@@ -40,7 +40,8 @@ func OpenBittorentFile(r io.Reader) (*bencodeTorrent, error){
     return &torrentinfo, nil
 }
 
-func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
+//add error statement
+func (bto bencodeTorrent) toTorrentFile() (TorrentFile, error) {
     torrentfile := TorrentFile{}
     torrentfile.Announce = bto.Announce
     torrentfile.Length = bto.Info.Length
@@ -63,7 +64,7 @@ func (bto bencodeTorrent) toTorrentFile() (TorrentFile) {
         }
     }
     
-    return torrentfile
+    return torrentfile, nil
 }
 
 func EncodeToBytes(p interface{}) []byte {

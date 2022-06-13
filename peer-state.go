@@ -25,13 +25,13 @@ func (state *pieceProgress) readMessage() error {
 		state.client.Choked = true
     case MsgHave: // peer is telling us we have the piece (?)
 				//why do we need to decode the payload for this case?
-        index, err := ParseHave(msg)
+        index, err := ParseHave(*msg)
 		if(err != nil){
 			return err
 		}
         state.client.Bitfield.SetPiece(index)
 	case MsgPiece: // they send the fucking piece for once
-		n, err := ParsePiece(state.index, state.buf, &msg)
+		n, err := ParsePiece(state.index, state.buf, msg)
 		if err != nil{
 			return err
 		}

@@ -22,7 +22,7 @@ type pieceDled struct{
 //no, its not size
 //maybe length of number of blocks?
 
-func(t *TorrentData) Download(){
+func(t *TorrentData) Download() ([]byte, error){
 	workQueue := make(chan * piecetoDl, len(t.PieceHashes))
 	results := make(chan *pieceDled)
 	for index, hash := range t.PieceHashes {
@@ -43,6 +43,8 @@ func(t *TorrentData) Download(){
 	}
 
 	close(workQueue)
+
+	return buf, nil
 }
 
 //makes connection with peer, pushes dled piece to results buffer
