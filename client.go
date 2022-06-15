@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
+	//"log"
 	"net"
 	"strconv"
 	"time"
@@ -21,11 +21,9 @@ type Client struct {
 
 func NewClient(peer Peer, PeerID [20]byte, InfoHash [20]byte) (*Client, error){
 	peerstr :=  net.JoinHostPort(peer.IP, strconv.Itoa(int(peer.Port)))
-	conn, err := net.DialTimeout("tcp", peerstr, 5*time.Second)
+	conn, err := net.DialTimeout("tcp", peerstr, 30*time.Second)
 	if err != nil{
-		log.Println(err)
-		return nil, nil
-		//need to kill the thread somehow
+		return nil, err
 	}
 
 	_, err = completeHandshake(conn, PeerID, InfoHash)
@@ -42,6 +40,7 @@ func NewClient(peer Peer, PeerID [20]byte, InfoHash [20]byte) (*Client, error){
 		conn.Close()
 		return nil, err
 	}
+	// log.Printf("Recieved bitfield from peer %q %q", peer.IP, bf)
 
 	return &Client{
 		Conn: conn,
@@ -71,8 +70,8 @@ func (c *Client) SendHave(index int) error {
 	return err
 }
 
-func (c *Client) SendRequest(index int, requested int, blockSize int) error {
-	msg := FormatHave(index)
+func (c *Client) SendRequest(index, begin, length int) error {
+	msg := FormatRequest(index, begin, length)
 	_, err := c.Conn.Write(msg.Serialize())
 	return err
 }

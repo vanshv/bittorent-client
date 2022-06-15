@@ -28,14 +28,22 @@ type Message struct {
 type Bitfield []byte //we don't keep an instance of our bitfield, but of the peers that are connected to us
 
 func (bf Bitfield) HasPiece(index int) bool {
-	byteIndex := index/8
-	offset := index%8
+	byteIndex := index / 8
+	offset := index % 8
+	if byteIndex < 0 || byteIndex >= len(bf) {
+		return false
+	}
 	return bf[byteIndex]>>(7-offset)&1 != 0
 }
 
 func (bf Bitfield) SetPiece(index int) {
-	byteIndex := index/8
-	offset := index%8
+	byteIndex := index / 8
+	offset := index % 8
+
+	//discard invalid bounded index
+	if byteIndex < 0 || byteIndex >= len(bf) {
+		return
+	}
 	bf[byteIndex] |= 1 << (7 - offset)
 }//each byte has 8 bits, this expression turns the specified bit in that byte on
 
@@ -79,6 +87,14 @@ func ReadMessage(r io.Reader) (*Message, error) {
 	}
 
 	return &m, nil
+}
+
+func FormatRequest(index, begin, length int) *Message {
+	payload := make([]byte, 12)
+	binary.BigEndian.PutUint32(payload[0:4], uint32(index))
+	binary.BigEndian.PutUint32(payload[4:8], uint32(begin))
+	binary.BigEndian.PutUint32(payload[8:12], uint32(length))
+	return &Message{ID: MsgRequest, Payload: payload}
 }
 
 func FormatHave(index int) *Message{

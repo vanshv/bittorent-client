@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 	"errors"
+	"runtime"
 )
 
 //how to remove errors with t. or how to remove t from everywhere?
@@ -35,14 +36,19 @@ func(t *TorrentData) Download() ([]byte, error){
 	//basically, the whole file is stored in this random buffer
 	buf := make([]byte, t.Length)
 	dledPieces := 0
-	for dledPieces < len(t.PieceHashes){
+	for (dledPieces < t.Length/t.PieceLength){
 		res := <-results
 		begin, end := t.calculateBounds(res.index)//this can use calculatePieceSize ig
 		copy(buf[begin : end], res.buf)
 		dledPieces++
+
+		numWorkers := runtime.NumGoroutine() - 1 // subtract 1 for main thread
+		// log.Printf("Downloaded piece #%d\n", res.index)
+		log.Printf("Downloaded %d out of %d or %d pieces from %d peers\n", 
+		dledPieces, t.Length/t.PieceLength, len(t.PieceHashes), numWorkers)
 	}
 
-	close(workQueue)
+	//close(workQueue)
 
 	return buf, nil
 }
@@ -51,9 +57,13 @@ func(t *TorrentData) Download() ([]byte, error){
 func (t *TorrentData) startDlWorker(peer Peer, workQueue chan *piecetoDl, results chan *pieceDled){
 	c, err := NewClient(peer, t.MyPeerID, t.InfoHash)
 	if err != nil{
-		panic(err)
+		log.Printf("Could not perform handshake. Disconnecting %q", peer.IP)
+		return
 	}
 	defer c.Conn.Close()
+	// if c == nil{
+	// 	return
+	// }
 	log.Printf("Completed handshake with %s\n", peer.IP)
 
 	c.SendUnchoke()
@@ -86,9 +96,8 @@ func (t *TorrentData) startDlWorker(peer Peer, workQueue chan *piecetoDl, result
 
 const MaxBlockSize = 16384
 const MaxBacklog = 5
-//number of unfulfilled requests a client can have
-//no idea whats happening here
 func attemptPieceDownload(c *Client, p2dl *piecetoDl) ([]byte, error){
+	log.Printf("Attempting piece #%d download from peer %q", p2dl.index, c.peer.IP)
 	state := pieceProgress{
 		index: p2dl.index,
 		client: c,
@@ -113,12 +122,13 @@ func attemptPieceDownload(c *Client, p2dl *piecetoDl) ([]byte, error){
 				}
 				state.backlog++
 				state.requested += blockSize
+				//log.Printf("Added piece %d to %q peer's backloglist", p2dl.index, c.peer.IP)
 			}
+		}
 
-			err := state.readMessage()
-			if err != nil {
-				return nil, err
-			}
+		err := state.readMessage()
+		if err != nil {
+			return nil, err			
 		}
 	}
 
@@ -126,8 +136,8 @@ func attemptPieceDownload(c *Client, p2dl *piecetoDl) ([]byte, error){
 }
 
 func (t *TorrentData) calculatePieceSize(index int) (int) {
-	if len(t.PieceHashes) == index {
-		remainder := t.Length - (len(t.PieceHashes) - 1)*t.PieceLength
+	if (len(t.PieceHashes) - 1) == index {
+		remainder := t.Length - (len(t.PieceHashes) - 2)*t.PieceLength
 		return remainder
 	}
 	return t.PieceLength
@@ -135,7 +145,7 @@ func (t *TorrentData) calculatePieceSize(index int) (int) {
 
 func (t *TorrentData) calculateBounds(index int) (int, int){
 	piecesize := t.calculatePieceSize(index)
-	begin := t.PieceLength*(index-1)
+	begin := t.PieceLength*(index)
 	end := begin + piecesize
 	return begin, end
 }

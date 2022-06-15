@@ -18,6 +18,12 @@ func (state *pieceProgress) readMessage() error {
 	if err != nil{
 		return err
 	}
+
+	//keep alive message
+	if msg == nil{
+		return nil
+	}
+	
 	switch msg.ID {
 	case MsgUnchoke:
 		state.client.Choked = false
